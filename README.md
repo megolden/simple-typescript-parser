@@ -1,2 +1,2 @@
-# simple-typescript-parser
+# Simple TypeScript Parser
 a simple typescript language parser
