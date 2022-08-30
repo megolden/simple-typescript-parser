@@ -91,3 +91,5 @@ class CL {
 
 var ccc: CL;
 ccc?.[""].toString();
+
+"".

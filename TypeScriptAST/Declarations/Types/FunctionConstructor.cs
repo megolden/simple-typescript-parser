@@ -11,7 +11,7 @@ internal class FunctionConstructor : Constructor
         new FunctionDefinition
         {
             Name = FunctionDefinition.ConstructorName,
-            Type = FunctionOf(Any, ("args", ArrayOf(Any), false, true)),
+            Type = FunctionOf(Any, ("args", ArrayOf(Any), IsOptional: false, IsRest: true)),
             Parameters =
             {
                 new FunctionParameter("args", ArrayOf(String), isRest: true)

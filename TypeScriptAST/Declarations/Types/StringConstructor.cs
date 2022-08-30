@@ -17,6 +17,28 @@ internal class StringConstructor : Constructor
                 new FunctionParameter("value", Any, isOptional: true)
             },
             DeclaringType = this
+        },
+        new FunctionDefinition
+        {
+            Name = "fromCharCode",
+            Type = String,
+            Parameters =
+            {
+                new FunctionParameter("codes", ArrayOf(Number), isRest: true)
+            },
+            IsStatic = true,
+            DeclaringType = this
+        },
+        new FunctionDefinition
+        {
+            Name = "fromCodePoint",
+            Type = String,
+            Parameters =
+            {
+                new FunctionParameter("codePoints", ArrayOf(Number), isRest: true)
+            },
+            IsStatic = true,
+            DeclaringType = this
         }
     };
 }

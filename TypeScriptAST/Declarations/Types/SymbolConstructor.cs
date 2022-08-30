@@ -18,6 +18,17 @@ internal class SymbolConstructor : Constructor
                 new FunctionParameter("key", String)
             },
             DeclaringType = this
+        },
+        new FunctionDefinition
+        {
+            Name = "keyFor",
+            Type = String,
+            IsStatic = true,
+            Parameters =
+            {
+                new FunctionParameter("sym", Symbol)
+            },
+            DeclaringType = this
         }
     };
 }
