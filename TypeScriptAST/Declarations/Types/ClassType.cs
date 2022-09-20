@@ -3,33 +3,46 @@ using System.Linq;
 
 namespace TypeScriptAST.Declarations.Types;
 
-internal class ClassType : Type
+public class ClassType : Type
 {
-    public sealed override bool IsClass => true;
-    public sealed override bool IsAbstract { get; }
-    public override MemberDefinition[] DeclaredMembers { get; }
-    public override Type[] Interfaces { get; }
+    private readonly List<MemberDefinition> _declaredMembers;
+    private readonly List<InterfaceType> _interfaces;
 
-    public ClassType(
+    public bool IsAbstract { get; }
+    public Type? SuperType { get; }
+
+    public IReadOnlyCollection<MemberDefinition> DeclaredMembers => _declaredMembers.ToArray();
+    public IReadOnlyCollection<InterfaceType> Interfaces => _interfaces.ToArray();
+
+    internal ClassType(
         string fullName,
         bool isAbstract,
         IEnumerable<MemberDefinition> members,
-        IEnumerable<Type> interfaces,
-        Type? superType = null) : base(fullName, superType ?? Object)
+        IEnumerable<InterfaceType> interfaces,
+        Type? superType = null,
+        Type? ownerType = null) : base(fullName, ownerType)
     {
         IsAbstract = isAbstract;
-        Interfaces = interfaces.ToArray();
-        DeclaredMembers = members.Select(member =>
-        {
-            member.DeclaringType = this;
-            return member;
-        }).ToArray();
+        SuperType = superType;
+        _interfaces = interfaces.ToList();
+        _declaredMembers = members
+            .Select(_ => _.WithDeclaringType(this))
+            .Select(_ => _ is FunctionMember { IsClassConstructor: true } ? _.WithType(this) : _)
+            .ToList();
     }
 
-    public ClassType(string fullName, bool isAbstract, Type? superType = null) : this(
+    internal ClassType(string fullName, bool isAbstract, Type? superType = null) : this(
         fullName,
         isAbstract,
         Enumerable.Empty<MemberDefinition>(),
-        Enumerable.Empty<Type>(),
-        superType) { }
+        Enumerable.Empty<InterfaceType>(),
+        superType)
+    {
+    }
+
+    public override bool IsAssignableFrom(Type type)
+    {
+        return base.IsAssignableFrom(type) ||
+               (type is ClassType { SuperType: { } superType } && IsAssignableFrom(superType));
+    }
 }

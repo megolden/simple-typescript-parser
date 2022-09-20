@@ -16,122 +16,71 @@ public class GlobalModule : ModuleDef
 
     private void AddGlobalConstants()
     {
-        Constants.Add(new ConstDeclaration
-        {
-            Name = "console",
-            Type = Type.Console
-        });
+        Add(new VarDeclaration("NaN", Type.Number));
+        Add(new VarDeclaration("Infinity", Type.Number));
     }
 
     private void AddGlobalFunctions()
     {
-        Functions.Add(new FunctionDeclaration
-        {
-            Name = "isNaN",
-            Type = Type.Boolean,
-            Parameters =
-            {
-                new FunctionParameter("number", Type.Number)
-            }
-        });
+        Add(new FunctionDeclaration(
+            "isNaN",
+            new[] { new FunctionParameter("number", Type.Number) },
+            Type.Boolean));
 
-        Functions.Add(new FunctionDeclaration
-        {
-            Name = "isFinite",
-            Type = Type.Boolean,
-            Parameters =
-            {
-                new FunctionParameter("number", Type.Number)
-            }
-        });
+        Add(new FunctionDeclaration(
+            "isFinite",
+            new[] { new FunctionParameter("number", Type.Number) },
+            Type.Boolean));
 
-        Functions.Add(new FunctionDeclaration
-        {
-            Name = "eval",
-            Type = Type.Any,
-            Parameters =
-            {
-                new FunctionParameter("x", Type.String)
-            }
-        });
+        Add(new FunctionDeclaration(
+            "eval",
+            new[] { new FunctionParameter("x", Type.String) },
+            Type.Any));
 
-        Functions.Add(new FunctionDeclaration
-        {
-            Name = "parseFloat",
-            Type = Type.Number,
-            Parameters =
-            {
-                new FunctionParameter("string", Type.String)
-            }
-        });
+        Add(new FunctionDeclaration(
+            "parseFloat",
+            new[] { new FunctionParameter("string", Type.String) },
+            Type.Number));
 
-        Functions.Add(new FunctionDeclaration
-        {
-            Name = "parseInt",
-            Type = Type.Number,
-            Parameters =
+        Add(new FunctionDeclaration(
+            "parseInt",
+            new[]
             {
                 new FunctionParameter("string", Type.String),
                 new FunctionParameter("radix", Type.Number, isOptional: true)
-            }
-        });
+            },
+            Type.Number));
 
-        Functions.Add(new FunctionDeclaration
-        {
-            Name = "encodeURI",
-            Type = Type.String,
-            Parameters =
-            {
-                new FunctionParameter("uri", Type.String)
-            }
-        });
+        Add(new FunctionDeclaration(
+            "encodeURI",
+            new[] { new FunctionParameter("uri", Type.String) },
+            Type.String));
 
-        Functions.Add(new FunctionDeclaration
-        {
-            Name = "encodeURIComponent",
-            Type = Type.String,
-            Parameters =
-            {
-                new FunctionParameter("uriComponent", Type.String | Type.Number | Type.Boolean)
-            }
-        });
+        Add(new FunctionDeclaration(
+            "encodeURIComponent",
+            new[] { new FunctionParameter("uriComponent", Type.String | Type.Number | Type.Boolean) },
+            Type.String));
 
-        Functions.Add(new FunctionDeclaration
-        {
-            Name = "decodeURI",
-            Type = Type.String,
-            Parameters =
-            {
-                new FunctionParameter("encodedURI", Type.String)
-            }
-        });
+        Add(new FunctionDeclaration(
+            "decodeURI",
+            new[] { new FunctionParameter("encodedURI", Type.String) },
+            Type.String));
 
-        Functions.Add(new FunctionDeclaration
-        {
-            Name = "decodeURIComponent",
-            Type = Type.String,
-            Parameters =
-            {
-                new FunctionParameter("encodedURIComponent", Type.String)
-            }
-        });
-
-        Functions.Add(new FunctionDeclaration
-        {
-            Name = "Date",
-            Type = Type.String
-        });
+        Add(new FunctionDeclaration(
+            "decodeURIComponent",
+            new[] { new FunctionParameter("encodedURIComponent", Type.String) },
+            Type.String));
     }
 
     private void AddBuiltInTypes()
     {
-        Types.AddRange(TypeResolver.BuiltInTypes);
+        Add(TypeSystem.BuiltInTypes);
     }
 
     private void AddCommonTypes()
     {
-        Types.Add(Type.RegExp);
-        Types.Add(Type.Date);
-        Types.Add(Type.Console);
+        Add(Type.RegExp);
+        Add(Type.CreateInterface("Date", Type.ObjectType));
+        Add(Type.CreateInterface("Console", Type.ObjectType));
     }
 }

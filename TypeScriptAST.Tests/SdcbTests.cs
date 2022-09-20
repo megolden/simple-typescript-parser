@@ -10,7 +10,7 @@ public class SdcbTests
     [Fact]
     void Simple_function_declaration_should_be_parse_properly()
     {
-        var ast = new Sdcb.TypeScript.TypeScriptAST(@"export declare function isNaN(n: number): boolean;");
+        var ast = new Sdcb.TypeScript.TypeScriptAST(@"function f(n: number/*XYZ*/): boolean {}");
 
         var stmts = (ast.RootNode as SourceFile).Statements;
 

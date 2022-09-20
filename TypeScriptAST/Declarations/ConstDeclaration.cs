@@ -2,9 +2,14 @@
 
 namespace TypeScriptAST.Declarations;
 
-public class ConstDeclaration : Declaration, IMemberInfo
+public class ConstDeclaration : ModuleDeclaration
 {
-    public Type Type { get; set; } = Type.Any;
+    public ConstDeclaration(string fullName) : this(fullName, Type.Any)
+    {
+    }
+    public ConstDeclaration(string fullName, Type type) : base(fullName, type)
+    {
+    }
 
     public override string ToString()
     {

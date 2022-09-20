@@ -6,12 +6,24 @@ namespace TypeScriptAST.Declarations;
 
 public class ModuleDef
 {
-    public List<Type> Types { get; set; } = new();
-    public List<VarDeclaration> Vars { get; set; } = new();
-    public List<LetDeclaration> Lets { get; set; } = new();
-    public List<ConstDeclaration> Constants { get; set; } = new();
-    public List<FunctionDeclaration> Functions { get; set; } = new();
+    private readonly List<Type> _types = new();
+    private readonly List<ModuleDeclaration> _declarations = new();
 
-    public IEnumerable<IMemberInfo> Members
-        => Vars.Concat<IMemberInfo>(Lets).Concat(Constants).Concat(Functions);
+    public IReadOnlyCollection<Type> Types => _types.ToArray();
+    public IReadOnlyCollection<ModuleDeclaration> Declarations => _declarations.ToArray();
+
+    public IEnumerable<VarDeclaration> Vars => _declarations.OfType<VarDeclaration>();
+    public IEnumerable<LetDeclaration> Lets => _declarations.OfType<LetDeclaration>();
+    public IEnumerable<ConstDeclaration> Constants => _declarations.OfType<ConstDeclaration>();
+    public IEnumerable<FunctionDeclaration> Functions => _declarations.OfType<FunctionDeclaration>();
+
+    public void Add(params Type[] types)
+    {
+        _types.AddRange(types);
+    }
+
+    public void Add(params ModuleDeclaration[] declarations)
+    {
+        _declarations.AddRange(declarations);
+    }
 }

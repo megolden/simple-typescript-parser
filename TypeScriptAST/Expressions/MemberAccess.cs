@@ -4,9 +4,9 @@ namespace TypeScriptAST.Expressions;
 
 public class MemberAccess : Operator
 {
-    public Expression Instance { get; private init; }
-    public IMemberInfo Member { get; private init; }
-    public bool IsOptional { get; private init; }
+    public Expression Instance { get; }
+    public IMemberInfo Member { get; }
+    public bool IsOptional { get; }
 
     internal MemberAccess(Expression instance, IMemberInfo member, bool isOptional)
         : base(
@@ -21,6 +21,6 @@ public class MemberAccess : Operator
 
     public override string ToString()
     {
-        return $"{Instance}{(IsOptional ? "?." : ".")}{Member.Name}";
+        return $"{Instance}{(IsOptional ? "?." : ".")}{Member.Name}".TrimEnd('.');
     }
 }

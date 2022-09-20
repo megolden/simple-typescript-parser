@@ -2,9 +2,14 @@
 
 namespace TypeScriptAST.Declarations;
 
-public class LetDeclaration : Declaration, IMemberInfo
+public class LetDeclaration : ModuleDeclaration
 {
-    public Type Type { get; set; } = Type.Any;
+    public LetDeclaration(string fullName) : this(fullName, Type.Any)
+    {
+    }
+    public LetDeclaration(string fullName, Type type) : base(fullName, type)
+    {
+    }
 
     public override string ToString()
     {

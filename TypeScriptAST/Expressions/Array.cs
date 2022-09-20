@@ -1,29 +1,29 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using String = System.String;
 using Type = TypeScriptAST.Declarations.Types.Type;
 
 namespace TypeScriptAST.Expressions;
 
 public class Array : Expression
 {
-    public IReadOnlyList<Expression> Items { get; private init; }
+    public Type ElementType { get; }
+    public IReadOnlyList<Expression> Items { get; }
 
-    internal Array(IEnumerable<Expression> items) : base(ResolveType(items))
+    internal Array(params Expression[] items) : base(Type.ArrayOf(ResolveElementType(items)))
     {
         Items = items.ToList();
+        ElementType = ResolveElementType(items);
     }
 
-    private static Type ResolveType(IEnumerable<Expression> items)
+    private static Type ResolveElementType(IList<Expression> items)
     {
-        var itemsList = items.ToList();
-        return itemsList.Count > 0 && itemsList.All(_ => _.Type == itemsList[0].Type) ?
-            itemsList[0].Type :
+        return items.Count > 0 && items.All(_ => _.Type == items[0].Type) ?
+            items[0].Type :
             Type.Any;
     }
 
     public override string ToString()
     {
-        return $"[{String.Join(", ", Items)}]";
+        return $"{ElementType.Name}[]";
     }
 }

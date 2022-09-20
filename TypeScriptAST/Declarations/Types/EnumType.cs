@@ -4,52 +4,48 @@ using System.Linq;
 
 namespace TypeScriptAST.Declarations.Types;
 
-internal class EnumType : Type
+public class EnumType : Type
 {
-    public sealed override bool IsEnum => true;
-    public sealed override Type UnderlyingType { get; }
-    public override MemberDefinition[] DeclaredMembers { get; }
+    public Type ValueType { get; }
+    public IReadOnlyCollection<MemberDefinition> Members { get; }
 
-    public EnumType(string fullName, IDictionary<string, object> values) : base(fullName, Object)
+    internal EnumType(string fullName, IDictionary<string, object> values, Type? ownerType = null)
+        : base(fullName, ownerType)
     {
         if (!values.Any())
             throw new InvalidOperationException($"enums must have at least on value: {fullName}");
 
-        UnderlyingType = IsString(values.Values.First()) ? String : Number;
+        ValueType = IsString(values.Values.First())  ? String :
+                    IsNumeric(values.Values.First()) ? Number :
+                    throw new NotSupportedException("enum values must be string or number");
 
-        if ((UnderlyingType is String && values.Any(_ => !IsString(_.Value))) ||
-            (UnderlyingType is Number && values.Any(_ => !IsNumeric(_.Value))))
+        if ((ValueType == String && !values.Values.All(IsString)) ||
+            (ValueType == Number && !values.Values.All(IsNumeric)))
             throw new InvalidOperationException($"enum type values must be only number or string: {fullName}");
 
-        DeclaredMembers = GetMembers(values).ToArray();
+        Members = GenerateMembers(values).ToList();
     }
 
-    private IEnumerable<MemberDefinition> GetMembers(IDictionary<string, object> values)
+    private IEnumerable<MemberDefinition> GenerateMembers(IDictionary<string, object> values)
     {
-        IEnumerable<MemberDefinition> ValueToMembers(KeyValuePair<string, object> item)
+        return values.SelectMany(item => new[]
         {
-            yield return new PropertyDefinition
-            {
-                Name = item.Key,
-                Type = UnderlyingType,
-                InitialValue = item.Value,
-                ReadOnly = true,
-                IsStatic = true,
-                DeclaringType = this
-            };
-            yield return new PropertyDefinition
-            {
-                Name = item.Value.ToString(),
-                Type = String,
-                InitialValue = item.Key,
-                ReadOnly = true,
-                IsStatic = true,
-                DeclaringType = this
-            };
-        }
+            new PropertyMember(
+                item.Key,
+                ValueType,
+                readOnly: true,
+                isStatic: true,
+                initialValue: item.Value)
+                .WithDeclaringType(this),
 
-        foreach (var member in values.SelectMany(ValueToMembers))
-            yield return member;
+            new PropertyMember(
+                item.Value.ToString(),
+                String,
+                readOnly: true,
+                isStatic: true,
+                initialValue: item.Key)
+                .WithDeclaringType(this)
+        });
     }
 
     private bool IsString(object value)
@@ -65,5 +61,11 @@ internal class EnumType : Type
             int or uint or
             long or ulong or
             float or double;
+    }
+
+    public override bool IsAssignableFrom(Type type)
+    {
+        return base.IsAssignableFrom(type) ||
+               ValueType.IsAssignableFrom(type);
     }
 }

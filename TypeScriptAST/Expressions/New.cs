@@ -7,10 +7,10 @@ namespace TypeScriptAST.Expressions;
 
 public class New : Operator
 {
-    public FunctionDefinition Constructor { get; private init; }
+    public FunctionMember Constructor { get; private init; }
     public IReadOnlyList<Expression> Arguments { get; private init; }
 
-    internal New(FunctionDefinition constructor, IEnumerable<Expression> arguments)
+    internal New(FunctionMember constructor, IEnumerable<Expression> arguments)
         : base(OperatorType.New, "new", constructor.Type)
     {
         Constructor = constructor;

@@ -8,7 +8,9 @@ public sealed class Undefined :
     IComparable,
     IEquatable<Undefined>
 {
-    public static readonly Undefined Value = new Undefined();
+    private const int HashCode = 1;
+
+    public static readonly Undefined Value = new();
 
     private Undefined() { }
 
@@ -35,5 +37,20 @@ public sealed class Undefined :
     public override bool Equals(object? obj)
     {
         return CompareTo(obj) is 0;
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode;
+    }
+
+    public static bool operator ==(Undefined? op1, Undefined? op2)
+    {
+        return Object.Equals(op1, op2);
+    }
+
+    public static bool operator !=(Undefined? op1, Undefined? op2)
+    {
+        return !(op1 == op2);
     }
 }

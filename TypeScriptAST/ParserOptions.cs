@@ -1,20 +1,19 @@
-﻿using System.Collections.Generic;
-using TypeScriptAST.Declarations;
+﻿using TypeScriptAST.Declarations;
+using TypeScriptAST.Declarations.Types;
 
 namespace TypeScriptAST;
 
 public struct ParserOptions
 {
-    public ParserOptions()
-    {
-    }
+    public TypeSystem TypeSystem { get; } = new();
 
-    public List<ModuleDef> Modules { get; set; } = new();
+    public ParserOptions(params ModuleDef[] modules)
+    {
+        TypeSystem.AddModules(modules);
+    }
 
     public static ParserOptions GetDefault()
     {
-        var options = new ParserOptions();
-        options.Modules.Add(new GlobalModule());
-        return options;
+        return new ParserOptions(new GlobalModule());
     }
 }

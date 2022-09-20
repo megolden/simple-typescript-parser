@@ -4,9 +4,9 @@ namespace TypeScriptAST.Expressions;
 
 public class InstanceOf : UnaryOperator
 {
-    public Type TargetType { get; private init; }
+    public Expression TargetType { get; }
 
-    internal InstanceOf(Expression obj, Type targetType) : base(
+    internal InstanceOf(Expression obj, Expression targetType) : base(
         obj,
         OperatorType.InstanceOf,
         "instanceof",
@@ -17,6 +17,6 @@ public class InstanceOf : UnaryOperator
 
     public override string ToString()
     {
-        return $"{Operand} {Sign} {TargetType.Name}";
+        return $"{Operand} {Sign} {TargetType}";
     }
 }

@@ -1,40 +1,41 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace TypeScriptAST.Declarations.Types;
 
-public abstract class Type
+public abstract class Type : IEquatable<Type>
 {
-    public string Name { get; private init; }
-    public string? Namespace { get; private init; }
-    public virtual bool IsInterface { get; } = false;
-    public virtual bool IsClass { get; } = false;
-    public virtual bool IsAbstract { get; } = false;
-    public virtual bool IsEnum { get; } = false;
-    public virtual bool IsArray { get; } = false;
-    public virtual Type? UnderlyingType { get; } = null;
-    public Type? SuperType { get; private init; }
-    public virtual bool IsUnion { get; } = false;
-    public virtual Type[] UnionTypes { get; } = System.Array.Empty<Type>();
-    public virtual Type[] Interfaces { get; } = System.Array.Empty<Type>();
-    public virtual MemberDefinition[] DeclaredMembers { get; } = System.Array.Empty<MemberDefinition>();
-    public FunctionDefinition[] Constructors => Functions.Where(_ => _.IsConstructor).ToArray();
-    public FunctionDefinition[] Functions => Members.OfType<FunctionDefinition>().ToArray();
-    public PropertyDefinition[] Properties => Members.OfType<PropertyDefinition>().ToArray();
-    public MemberDefinition[] Members => DeclaredMembers
-        .Concat(SuperType?.Members ?? Enumerable.Empty<MemberDefinition>())
-        .Concat(Interfaces.SelectMany(_ => _.Members))
-        .ToArray();
+    public string Name { get; }
+    public string? Namespace { get; }
+    public Type? OwnerType { get; }
 
-    public string FullName => $"{(Namespace is { Length: > 0 } ns ? ns + "." : "")}{Name}";
-
-    protected Type(string fullName, Type? superType = null)
+    public string FullName
     {
-        (Name, Namespace) =
-            fullName.LastIndexOf('.') is var sepIndex && sepIndex >= 0
-            ? (fullName.Substring(sepIndex + 1), fullName.Remove(sepIndex))
-            : (fullName, null);
-        SuperType = superType;
+        get
+        {
+            return OwnerType is not null
+                ? $"{OwnerType.FullName}.{Name}"
+                : $"{(Namespace is { Length: > 0 } ns ? ns + "." : "")}{Name}";
+        }
+    }
+
+    protected Type(string fullName, Type? ownerType = null)
+    {
+        OwnerType = ownerType;
+        if (ownerType is not null)
+        {
+            Namespace = ownerType.Namespace;
+            Name = fullName.LastIndexOf('.') is var sepIndex && sepIndex >= 0 ?
+                   fullName.Substring(sepIndex + 1) :
+                   fullName;
+        }
+        else
+        {
+            var sepIndex = fullName.LastIndexOf('.');
+            Name = sepIndex >= 0 ? fullName.Substring(sepIndex + 1) : fullName;
+            Namespace = sepIndex >= 0 ? fullName.Remove(sepIndex) : null;
+        }
     }
 
     public override string ToString()
@@ -42,37 +43,42 @@ public abstract class Type
         return Name;
     }
 
-    public override bool Equals(object? other)
+    protected virtual bool EqualTo(Type that)
     {
-        if (other is null)
+        return this.FullName.Equals(that.FullName, StringComparison.Ordinal);
+    }
+
+    bool IEquatable<Type>.Equals(Type? other) => other is not null && this.EqualTo(other);
+
+    public sealed override bool Equals(object? other)
+    {
+        if (other is not Type that)
             return false;
 
-        if (ReferenceEquals(this, other))
+        if (ReferenceEquals(this, that))
             return true;
 
-        return other is Type that &&
-               this.FullName.Length > 0 && that.FullName.Length > 0 &&
-               this.FullName == that.FullName;
+        return this.EqualTo(that);
     }
 
     public override int GetHashCode()
     {
-        return FullName.Length > 0 ? FullName.GetHashCode() : base.GetHashCode();
+        return FullName.GetHashCode();
     }
 
     public virtual bool IsAssignableFrom(Type type)
     {
-        if (ReferenceEquals(type, this) || type == this)
+        if (this.Equals(type))
             return true;
-        if (type.IsEnum && IsAssignableFrom(type.UnderlyingType))
-            return true;
-        if (IsEnum && type.UnderlyingType.IsAssignableFrom(type))
-            return true;
-        if (IsUnion && UnionTypes.Any(uType => uType.IsAssignableFrom(type)))
-            return true;
-        if (type.Interfaces.Any(IsAssignableFrom))
-            return true;
-        return type.SuperType is not null && IsAssignableFrom(type.SuperType);
+
+        switch (type)
+        {
+            case AliasType aliasType when IsAssignableFrom(aliasType.ReferencedType):
+            case EnumType enumType when IsAssignableFrom(enumType.ValueType):
+                return true;
+            default:
+                return false;
+        }
     }
 
     public static bool operator ==(Type x, Type y)
@@ -82,7 +88,7 @@ public abstract class Type
 
     public static bool operator !=(Type x, Type y)
     {
-        return !System.Object.Equals(x, y);
+        return !(x == y);
     }
 
     public static Type operator |(Type x, Type y)
@@ -90,83 +96,92 @@ public abstract class Type
         return UnionOf(x, y);
     }
 
-    public static readonly Type Unknown = new Unknown();
-    public static readonly Type Never = new Never();
-    public static readonly Type Any = new Any();
-    public static readonly Type Void = new Void();
-    public static readonly Type Null = new Null();
-    public static readonly Type Undefined = new Undefined();
-    public static readonly Type String = new String();
-    public static readonly Type StringConstructor = new StringConstructor();
-    public static readonly Type Number = new Number();
-    public static readonly Type NumberConstructor = new NumberConstructor();
-    public static readonly Type BigInt = new BigInt();
-    public static readonly Type Boolean = new Boolean();
-    public static readonly Type BooleanConstructor = new BooleanConstructor();
-    public static readonly Type Object = new Object();
-    public static readonly Type ObjectConstructor = new ObjectConstructor();
-    public static readonly Type FunctionConstructor = new FunctionConstructor();
-    public static readonly Type RegExp = new RegExp();
-    public static readonly Type Date = new Date();
-    public static readonly Type Console = new Console();
-    public static readonly Type Symbol = new Symbol();
-    public static readonly Type SymbolConstructor = new SymbolConstructor();
-    public static readonly Type Error = new Error();
-    public static readonly Type Math = new Math();
-    public static readonly Type Json = new Json();
-    public static readonly Type ArrayConstructor = new ArrayConstructor();
-    public static Type ArrayOf(Type elementType) => new Array(elementType);
-    public static Type UnionOf(params Type[] types) => new UnionType(types);
-    public static Type FunctionOf(
+    public static readonly Type Unknown = CreateInterface("unknown");
+    public static readonly Type Never = CreateInterface("never");
+    public static readonly Type Any = CreateInterface("any", Unknown);
+    public static readonly Type Void = CreateInterface("void", Any);
+    public static readonly Type Null = CreateInterface("null", Any);
+    public static readonly Type Undefined = CreateInterface("undefined", Void);
+    public static readonly Type StringType = CreateInterface("String", Any);
+    public static readonly Type String = CreateAlias("string", StringType);
+    public static readonly Type NumberType = CreateInterface("Number", Any);
+    public static readonly Type Number = CreateAlias("number", NumberType);
+    public static readonly Type BigIntType = CreateInterface("BigInt", Any);
+    public static readonly Type BigInt = CreateAlias("bigint", BigIntType);
+    public static readonly Type BooleanType = CreateInterface("Boolean", Any);
+    public static readonly Type Boolean = CreateAlias("boolean", BooleanType);
+    public static readonly Type ObjectType = CreateInterface("Object", Any);
+    public static readonly Type Object = CreateAlias("object", ObjectType);
+    public static readonly Type SymbolType = CreateInterface("Symbol", Any);
+    public static readonly Type Symbol = CreateInterface("symbol", SymbolType);
+    public static readonly Type RegExp = CreateInterface("RegExp", ObjectType);
+
+    public static Type UnionOf(params Type[] types) => UnionType.UnionOrTypeOf(types);
+    public static FunctionType FunctionOf(
         Type type,
         params (string Name, Type Type, bool IsOptional, bool IsRest)[] parameters)
     {
-        return new Function(
-            parameters.Select(_ => new Function.Parameter(_.Name, _.Type, _.IsOptional, _.IsRest)),
+        return new FunctionType(
+            parameters.Select(_ => new FunctionParameter(_.Name, _.Type, _.IsOptional, _.IsRest)),
             type);
     }
+    public static ArrayType ArrayOf(Type elementType) => new ArrayType(elementType);
 
-    public static Type CreateEnum(string fullName, params (string Name, object Value)[] values)
+    public static EnumType CreateEnum(string fullName, params (string Name, object Value)[] values)
     {
         return new EnumType(fullName, values.ToDictionary(_ => _.Name, _ => _.Value));
     }
-    public static Type CreateEnum(string fullName, params string[] names)
+    public static EnumType CreateEnum(string fullName, params string[] names)
     {
         return CreateEnum(fullName, names.Select((name, index) => (name, (object)index)).ToArray());
     }
 
-    public static Type CreateAlias(string fullName, IEnumerable<MemberDefinition> members)
+    public static AliasType CreateAlias(string fullName, Type referencedType)
     {
-        return new AliasType(fullName, members);
+        return new AliasType(fullName, referencedType);
     }
 
-    public static Type CreateClass(
+    public static ClassType CreateClass(
         string fullName,
-        bool isAbstract,
         IEnumerable<MemberDefinition> members,
         IEnumerable<Type> interfaces,
+        bool isAbstract = false,
         Type? superType = null)
     {
-        return new ClassType(fullName, isAbstract, members, interfaces, superType);
+        return new ClassType(fullName, isAbstract, members, interfaces.Cast<InterfaceType>(), superType);
     }
-    public static Type CreateClass(
+    public static ClassType CreateClass(
         string fullName,
-        bool isAbstract,
         IEnumerable<MemberDefinition> members,
+        bool isAbstract = false,
         Type? superType = null)
     {
-        return CreateClass(fullName, isAbstract, members, Enumerable.Empty<Type>(), superType);
+        return CreateClass(fullName, members, Enumerable.Empty<InterfaceType>(), isAbstract, superType);
+    }
+    public static ClassType CreateClass(
+        string fullName,
+        bool isAbstract = false,
+        Type? superType = null,
+        params Type[] interfaces)
+    {
+        return CreateClass(fullName, Enumerable.Empty<MemberDefinition>(), interfaces, isAbstract, superType);
     }
 
-    public static Type CreateInterface(
+    public static InterfaceType CreateInterface(
         string fullName,
         IEnumerable<MemberDefinition> members,
         IEnumerable<Type> interfaces)
     {
-        return new InterfaceType(fullName, members, interfaces);
+        return new InterfaceType(fullName, members, interfaces.Cast<InterfaceType>());
     }
-    public static Type CreateInterface(string fullName, IEnumerable<MemberDefinition> members)
+    public static InterfaceType CreateInterface(string fullName, IEnumerable<MemberDefinition> members)
     {
-        return CreateInterface(fullName, members, Enumerable.Empty<Type>());
+        return CreateInterface(fullName, members, Enumerable.Empty<InterfaceType>());
     }
+    public static InterfaceType CreateInterface(string fullName, params Type[] interfaces)
+    {
+        return CreateInterface(fullName, Enumerable.Empty<MemberDefinition>(), interfaces);
+    }
+
+    internal static string GenerateAnonymousName() => "anonymous_" + Guid.NewGuid().ToString("N").ToLower();
 }

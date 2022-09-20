@@ -3,25 +3,43 @@ using System.Linq;
 
 namespace TypeScriptAST.Declarations.Types;
 
-internal class InterfaceType : Type
+public class InterfaceType : Type
 {
-    public sealed override bool IsInterface => true;
-    public override MemberDefinition[] DeclaredMembers { get; }
-    public override Type[] Interfaces { get; }
+    private readonly List<MemberDefinition> _declaredMembers;
+    private readonly List<InterfaceType> _interfaces;
 
-    public InterfaceType(
+    public IReadOnlyCollection<MemberDefinition> DeclaredMembers => _declaredMembers.ToArray();
+    public IReadOnlyCollection<InterfaceType> Interfaces => _interfaces.ToArray();
+
+    internal InterfaceType(
         string fullName,
         IEnumerable<MemberDefinition> members,
-        IEnumerable<Type> interfaces) : base(fullName, Object)
+        IEnumerable<InterfaceType> interfaces,
+        Type? ownerType = null) : base(fullName, ownerType)
     {
-        Interfaces = interfaces.ToArray();
-        DeclaredMembers = members.Select(member =>
-        {
-            member.DeclaringType = this;
-            return member;
-        }).ToArray();
+        _interfaces = interfaces.ToList();
+        _declaredMembers = members.Select(_ => _.WithDeclaringType(this)).ToList();
     }
 
-    public InterfaceType(string fullName)
-        : this(fullName, Enumerable.Empty<MemberDefinition>(), Enumerable.Empty<Type>()) { }
+    internal InterfaceType(string fullName, Type? ownerType = null)
+        : this(fullName, Enumerable.Empty<MemberDefinition>(), Enumerable.Empty<InterfaceType>(), ownerType)
+    {
+    }
+
+    public override bool IsAssignableFrom(Type type)
+    {
+        if (base.IsAssignableFrom(type))
+            return true;
+
+        switch (type)
+        {
+            case InterfaceType interfaceType when interfaceType._interfaces.Any(IsAssignableFrom):
+            case ClassType classType when classType.Interfaces.Any(IsAssignableFrom):
+                return true;
+            case ClassType { SuperType: { } } classType when IsAssignableFrom(classType.SuperType):
+                return true;
+            default:
+                return false;
+        }
+    }
 }

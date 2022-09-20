@@ -1,22 +1,17 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿namespace TypeScriptAST.Declarations.Types;
 
-namespace TypeScriptAST.Declarations.Types;
-
-internal class AliasType : Type
+public class AliasType : Type
 {
-    public override MemberDefinition[] DeclaredMembers { get; }
+    public Type ReferencedType { get; }
 
-    public AliasType(string fullName, IEnumerable<MemberDefinition> members) : base(fullName, Object)
+    internal AliasType(string fullName, Type referencedType, Type? ownerType = null) : base(fullName, ownerType)
     {
-        DeclaredMembers = members.Select(member =>
-        {
-            member.DeclaringType = this;
-            return member;
-        }).ToArray();
+        ReferencedType = referencedType;
     }
 
-    public AliasType(IEnumerable<MemberDefinition> members) : this(System.String.Empty, members)
+    public override bool IsAssignableFrom(Type type)
     {
+        return base.IsAssignableFrom(type) ||
+               ReferencedType.IsAssignableFrom(type);
     }
 }

@@ -4,34 +4,76 @@ using System.Linq;
 
 namespace TypeScriptAST.Declarations.Types;
 
-internal class UnionType : Type
+public class UnionType : Type
 {
-    public override bool IsUnion => true;
-    public override Type[] UnionTypes { get; }
+    private readonly bool _isAnonymous;
 
-    public UnionType(IEnumerable<Type> types) : this(System.String.Empty, types)
+    public IReadOnlyCollection<Type> UnionTypes { get; }
+
+    internal UnionType(IEnumerable<Type> types, Type? ownerType = null)
+        : this(GenerateAnonymousName(), types, ownerType)
+    {
+        _isAnonymous = true;
+    }
+
+    internal UnionType(string fullName, IEnumerable<Type> types, Type? ownerType = null)
+        : this(fullName, types, typesIsResolved: false, ownerType)
     {
     }
 
-    public UnionType(string fullName, IEnumerable<Type> types) : base(fullName, Object)
+    private UnionType(IEnumerable<Type> types, bool typesIsResolved, Type? ownerType = null)
+        : this(GenerateAnonymousName(), types, typesIsResolved, ownerType)
     {
-        IEnumerable<Type> ResolveTypes(Type type)
-        {
-            if (type is AliasType { IsUnion: true } aliasType)
-                return aliasType.UnionTypes.SelectMany(ResolveTypes);
-            return new[] { type };
-        }
+        _isAnonymous = true;
+    }
 
-        var resolvedTypes = types.SelectMany(ResolveTypes).Distinct().ToArray();
+    private UnionType(string fullName, IEnumerable<Type> types, bool typesIsResolved, Type? ownerType = null)
+        : base(fullName, ownerType)
+    {
+        var resolvedTypes = typesIsResolved ? types.ToArray() : ResolveUnionTypes(types);
 
-        if (resolvedTypes.Length < 2)
+        if (resolvedTypes.Count < 2)
             throw new ArgumentException("union types must have at least 2 types");
 
-        UnionTypes = resolvedTypes;
+        _isAnonymous = false;
+        UnionTypes = resolvedTypes.ToArray();
     }
 
     public override string ToString()
     {
         return System.String.Join(" | ", UnionTypes.AsEnumerable());
+    }
+
+    public override bool IsAssignableFrom(Type type)
+    {
+        return base.IsAssignableFrom(type) || UnionTypes.Any(_ => _.IsAssignableFrom(type)) ||
+               (type is UnionType unionType && unionType.UnionTypes.All(IsAssignableFrom));
+    }
+
+    protected override bool EqualTo(Type that)
+    {
+        if (!_isAnonymous) return base.EqualTo(that);
+
+        return that is UnionType thatUnion && UnionTypes.SequenceEqual(thatUnion.UnionTypes);
+    }
+
+    private static IList<Type> ResolveUnionTypes(IEnumerable<Type> types)
+    {
+        IEnumerable<Type> UnwrapTypes(Type type)
+        {
+            if (type is UnionType unionType)
+                return unionType.UnionTypes.SelectMany(UnwrapTypes);
+            return new[] { type };
+        }
+
+        return types.SelectMany(UnwrapTypes).Distinct().ToArray();
+    }
+
+    public static Type UnionOrTypeOf(IEnumerable<Type> types)
+    {
+        var resolvedTypes = ResolveUnionTypes(types);
+        return resolvedTypes.Count >= 2 ?
+            new UnionType(resolvedTypes, typesIsResolved: true) :
+            resolvedTypes[0];
     }
 }

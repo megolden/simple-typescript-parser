@@ -1,13 +1,14 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using TypeScriptAST.Declarations;
 using TypeScriptAST.Declarations.Types;
 using TemplateElement = TypeScriptAST.Expressions.TemplateLiteral.TemplateElement;
 
 namespace TypeScriptAST.Expressions;
 
-public abstract class Expression
+public abstract class Expression : Statement
 {
-    public Type Type { get; private init; }
+    public Type Type { get; }
 
     protected Expression(Type type)
     {
@@ -188,6 +189,10 @@ public abstract class Expression
     {
         return new FunctionCall(expression, arguments, isOptional);
     }
+    public static FunctionCall FunctionCall(Expression expression, IEnumerable<Expression> arguments, Type type, bool isOptional)
+    {
+        return new FunctionCall(expression, arguments, type, isOptional);
+    }
 
     public static Increment PrefixIncrement(Expression operand)
     {
@@ -209,17 +214,17 @@ public abstract class Expression
         return new Decrement(operand, isPrefix: false);
     }
 
-    public static New New(FunctionDefinition constructor, IEnumerable<Expression> arguments)
+    public static New New(FunctionMember constructor, IEnumerable<Expression> arguments)
     {
         return new New(constructor, arguments);
     }
 
     public static Array Array(IEnumerable<Expression> items)
     {
-        return new Array(items);
+        return new Array(items.ToArray());
     }
 
-    public static InstanceOf InstanceOf(Expression obj, Type targetType)
+    public static InstanceOf InstanceOf(Expression obj, Expression targetType)
     {
         return new InstanceOf(obj, targetType);
     }

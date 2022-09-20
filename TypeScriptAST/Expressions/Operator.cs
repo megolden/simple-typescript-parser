@@ -5,8 +5,8 @@ namespace TypeScriptAST.Expressions;
 
 public abstract class Operator : Expression
 {
-    public OperatorType OperatorType { get; private init; }
-    public string Sign { get; private init; }
+    public OperatorType OperatorType { get; }
+    public string Sign { get; }
 
     protected Operator(OperatorType operatorType, string sign, Type type)
         : base(type)
